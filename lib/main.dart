@@ -1,10 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
+import 'dart:ui' show ImageFilter;
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide Session;
@@ -308,7 +312,7 @@ class _SupportScreenState extends State<SupportScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('التواصل مع المرشد (سري)')),
+        appBar: AppBar(automaticallyImplyLeading: false, title: const Text('التواصل مع المرشد (سري)')),
         body: ListView(padding: const EdgeInsets.all(16), children: [
           const Text('يمكنك إرسال رسالتك بدون ذكر اسمك. وسيلة التواصل اختيارية.'),
           const SizedBox(height: 12),
@@ -415,7 +419,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('إدارة الإعلانات')),
+        appBar: AppBar(automaticallyImplyLeading: false, title: const Text('إدارة الإعلانات')),
         body: Column(children: [
           Padding(
             padding: const EdgeInsets.all(12),
@@ -518,7 +522,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   Widget build(BuildContext context) {
     final today = DateTime.now().toIso8601String().substring(0, 10);
     return Scaffold(
-      appBar: AppBar(title: const Text('المكتبة - الإعارات')),
+      appBar: AppBar(automaticallyImplyLeading: false, title: const Text('المكتبة - الإعارات')),
       floatingActionButton: FloatingActionButton(onPressed: _add, child: const Icon(Icons.add)),
       body: Loader<List<Map<String, dynamic>>>(
         future: _f,
@@ -572,7 +576,7 @@ class _PasswordScreenState extends State<PasswordScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('تغيير كلمة السر')),
+        appBar: AppBar(automaticallyImplyLeading: false, title: const Text('تغيير كلمة السر')),
         body: ListView(padding: const EdgeInsets.all(20), children: [
           _f('كلمة السر الحالية', _o),
           _f('كلمة السر الجديدة', _n),
@@ -590,7 +594,8 @@ class _PasswordScreenState extends State<PasswordScreen> {
 
 // ===== screens/login_screen.dart =====
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.admin = false});
+  final bool admin;
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
@@ -598,13 +603,12 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _u = TextEditingController();
   final _p = TextEditingController();
-  bool _admin = false;
   bool _busy = false;
   String _msg = '';
 
   Future<void> _go() async {
     setState(() { _busy = true; _msg = ''; });
-    final err = await session.login(_u.text, _p.text, adminPortal: _admin);
+    final err = await session.login(_u.text, _p.text, adminPortal: widget.admin);
     if (!mounted) return;
     if (err == null) {
       Navigator.pop(context);
@@ -615,19 +619,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('تسجيل الدخول')),
+        appBar: AppBar(automaticallyImplyLeading: false, title: Text(widget.admin ? 'بوابة الإدارة' : 'بوابة المعلمين والمعلمات')),
         body: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment(value: false, label: Text('المعلمون')),
-                ButtonSegment(value: true, label: Text('الإدارة والكادر')),
-              ],
-              selected: {_admin},
-              onSelectionChanged: (s) => setState(() => _admin = s.first),
-            ),
-            const SizedBox(height: 16),
             TextField(
               controller: _u,
               autocorrect: false,
@@ -700,7 +695,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      appBar: AppBar(automaticallyImplyLeading: false, 
         title: const Text('الجداول'),
         actions: [
           if (session.isAdmin && !exams)
@@ -922,7 +917,7 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('مهامي')),
+        appBar: AppBar(automaticallyImplyLeading: false, title: const Text('مهامي')),
         body: Column(children: [
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -1083,7 +1078,7 @@ class _OrganizerScreenState extends State<OrganizerScreen> {
   Widget build(BuildContext context) {
     final done = tasks.where((t) => t['done'] == true).length;
     return Scaffold(
-      appBar: AppBar(title: const Text('منظم الدراسة')),
+      appBar: AppBar(automaticallyImplyLeading: false, title: const Text('منظم الدراسة')),
       body: ListView(padding: const EdgeInsets.all(12), children: [
         if (tasks.isNotEmpty) ...[
           LinearProgressIndicator(value: done / tasks.length, minHeight: 10),
@@ -1154,7 +1149,7 @@ class _OrganizerScreenState extends State<OrganizerScreen> {
 }
 
 // ===== screens/tam_screen.dart =====
-/// تمانينة: اختيار المزاج ← سبب ← رسالة + تمرين تنفس + رسالة سرية للمرشد.
+/// طمأنينة: اختيار المزاج ← سبب ← رسالة + تمرين تنفس + رسالة سرية للمرشد.
 class TamScreen extends StatefulWidget {
   const TamScreen({super.key});
   @override
@@ -1227,7 +1222,7 @@ class _TamScreenState extends State<TamScreen> {
         OutlinedButton(onPressed: _reset, child: const Text('رجوع')),
       ]);
     }
-    return Scaffold(appBar: AppBar(title: const Text('تمانينة')), body: body);
+    return Scaffold(appBar: AppBar(automaticallyImplyLeading: false, title: const Text('طمأنينة')), body: body);
   }
 }
 
@@ -1293,7 +1288,7 @@ class _TamDashScreenState extends State<TamDashScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('لوحة تمانينة')),
+        appBar: AppBar(automaticallyImplyLeading: false, title: const Text('لوحة طمأنينة')),
         body: Column(children: [
           Padding(
             padding: const EdgeInsets.all(8),
@@ -1463,7 +1458,7 @@ class _TeachersScreenState extends State<TeachersScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: Text(widget.ownOnly ? 'بطاقتي' : 'المعلمون والمعلمات')),
+        appBar: AppBar(automaticallyImplyLeading: false, title: Text(widget.ownOnly ? 'بطاقتي' : 'المعلمون والمعلمات')),
         body: Column(children: [
           if (!widget.ownOnly)
             SingleChildScrollView(
@@ -1508,12 +1503,226 @@ class _TeachersScreenState extends State<TeachersScreen> {
 }
 
 // ===== screens/home_screen.dart =====
+// ===== design: shared pieces =====
+Widget assetImage(String name, {BoxFit fit = BoxFit.cover}) => name.endsWith('.svg')
+    ? SvgPicture.asset('assets/images/$name', fit: fit)
+    : Image.asset('assets/images/$name', fit: fit);
+
+/// فقاعة دائرية تطفو (animation) — تُستخدم للبوابات والقوائم.
+class FloatBubble extends StatelessWidget {
+  const FloatBubble({
+    super.key,
+    required this.anim,
+    required this.phase,
+    required this.size,
+    required this.child,
+    required this.onTap,
+  });
+  final Animation<double> anim;
+  final double phase;
+  final double size;
+  final Widget child;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: anim,
+        builder: (_, w) => Transform.translate(
+          offset: Offset(0, -8 * math.sin(math.pi * (anim.value + phase))),
+          child: w,
+        ),
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color.fromRGBO(255, 255, 255, .7), width: 3),
+              boxShadow: const [BoxShadow(color: Color.fromRGBO(37, 99, 235, .35), blurRadius: 16, offset: Offset(0, 6))],
+            ),
+            child: ClipOval(child: child),
+          ),
+        ),
+      );
+}
+
+class _Panel extends StatelessWidget {
+  const _Panel({required this.child, this.pad = const EdgeInsets.all(14)});
+  final Widget child;
+  final EdgeInsets pad;
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 12),
+      padding: pad,
+      decoration: BoxDecoration(
+        color: cs.surface.withValues(alpha: .78),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cs.outlineVariant),
+      ),
+      child: child,
+    );
+  }
+}
+
+Future<List<Map<String, dynamic>>> _loadAnnouncements() async {
+  try {
+    final d = await sb.from('announcements').select('id,text,created_at').order('created_at', ascending: false).limit(10);
+    return List<Map<String, dynamic>>.from(d);
+  } catch (_) {
+    return [];
+  }
+}
+
+Widget _announcementsBox(Future<List<Map<String, dynamic>>> f) => _Panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('الإعلانات', style: GoogleFonts.arefRuqaa(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF2563EB))),
+          const SizedBox(height: 6),
+          FutureBuilder<List<Map<String, dynamic>>>(
+            future: f,
+            builder: (c, s) {
+              if (s.connectionState != ConnectionState.done) return const LinearProgressIndicator();
+              final items = s.data ?? [];
+              if (items.isEmpty) return const Text('لا توجد إعلانات حالياً');
+              return Column(children: [for (final a in items) ListTile(dense: true, title: Text(a['text'] ?? ''))]);
+            },
+          ),
+        ],
+      ),
+    );
+
+// ===== screens/welcome_screen.dart =====
+class _Acc extends StatelessWidget {
+  const _Acc(this.title, this.image, this.text);
+  final String title, image, text;
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      decoration: BoxDecoration(
+        color: cs.surface.withValues(alpha: .78),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cs.outlineVariant),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          title: Text(title, style: GoogleFonts.arefRuqaa(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF2563EB))),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          children: [
+            Row(children: [
+              ClipOval(child: SizedBox(width: 84, height: 84, child: assetImage(image))),
+              const SizedBox(width: 12),
+              Expanded(child: Text(text, style: const TextStyle(height: 1.9))),
+            ]),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class WelcomeScreen extends StatefulWidget {
+  const WelcomeScreen({super.key});
+  @override
+  State<WelcomeScreen> createState() => _WelcomeScreenState();
+}
+
+class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat(reverse: true);
+  late Future<List<Map<String, dynamic>>> _ann = _loadAnnouncements();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  Widget _portal(String label, String image, double phase, VoidCallback onTap, {Color bg = Colors.white}) => Column(children: [
+        FloatBubble(
+          anim: _c,
+          phase: phase,
+          size: 150,
+          onTap: onTap,
+          child: Stack(fit: StackFit.expand, children: [
+            ColoredBox(color: bg),
+            assetImage(image),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Color.fromRGBO(15, 23, 42, .85)]),
+                ),
+                child: Text(label, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+              ),
+            ),
+          ]),
+        ),
+        const SizedBox(height: 12),
+      ]);
+
+  @override
+  Widget build(BuildContext context) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    return Scaffold(
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: () async => setState(() => _ann = _loadAnnouncements()),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
+            children: [
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  'مدرسة الملك عبد الله الثاني للتميز - الطفيلة',
+                  maxLines: 1,
+                  style: GoogleFonts.arefRuqaa(
+                    fontSize: 30,
+                    fontWeight: FontWeight.bold,
+                    color: onSurface,
+                    shadows: const [Shadow(color: Color.fromRGBO(255, 255, 255, .8), blurRadius: 8)],
+                  ),
+                ),
+              ),
+              const _Acc('رؤيتنا', 'vision.jpg', 'نحو مدرسة رائدة في التميز والتعلم المستدام، وبيئة آمنة وشراكة فاعلة، وقيادة تشاركية عادلة وشفافة.'),
+              const _Acc('رسالتنا', 'mission.jpg',
+                  'تلتزم المدرسة بتقديم تعليم نوعي يركز على تحسين تعلم الطلبة ورفع أدائهم، وتوفير بيئة مدرسية آمنة ونظيفة، وبناء شراكات فاعلة مع الأسرة والمجتمع المحلي، وتمكين الكادر المدرسي من المشاركة في القيادة وتحمل المسؤوليات بعدالة وشفافية؛ لتحقيق التحسين المستمر والتميز المدرسي.'),
+              _announcementsBox(_ann),
+              const SizedBox(height: 24),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 18,
+                children: [
+                  _portal('بوابة الطالب', 'student-char.jpg', 0, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HomeScreen()))),
+                  _portal('بوابة المعلمين والمعلمات', 'teacher-char.jpg', .3, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()))),
+                  _portal('بوابة الإدارة', 'office.svg', .6, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen(admin: true))), bg: const Color(0xFFF1F5F9)),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ===== screens/home_screen.dart (قائمة الفقاعات) =====
 class _Item {
   final IconData icon;
   final String title;
   final Set<String> roles;
   final Widget Function() page;
-  const _Item(this.icon, this.title, this.roles, this.page);
+  final String? asset;
+  const _Item(this.icon, this.title, this.roles, this.page, [this.asset]);
 }
 
 class HomeScreen extends StatefulWidget {
@@ -1522,34 +1731,56 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  late Future<List<Map<String, dynamic>>> _ann = _loadAnn();
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat(reverse: true);
+  late Future<List<Map<String, dynamic>>> _ann = _loadAnnouncements();
 
-  Future<List<Map<String, dynamic>>> _loadAnn() async {
-    final d = await sb
-        .from('announcements')
-        .select('id,text,created_at')
-        .order('created_at', ascending: false)
-        .limit(10);
-    return List<Map<String, dynamic>>.from(d);
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
   }
 
   static final _items = <_Item>[
-    _Item(Icons.calendar_month, 'الجداول', {'student', 'teacher', 'staff', 'admin'}, () => const ScheduleScreen()),
+    _Item(Icons.calendar_month, 'الجداول', {'student', 'teacher', 'staff', 'admin'}, () => const ScheduleScreen(), 'char-schedule.svg'),
     _Item(Icons.assignment, 'مهامي', {'student'}, () => const MyTasksScreen()),
-    _Item(Icons.checklist, 'منظم الدراسة', {'student'}, () => const OrganizerScreen()),
-    _Item(Icons.favorite, 'تمانينة', {'student'}, () => const TamScreen()),
-    _Item(Icons.badge, 'بطاقتي', {'teacher', 'staff'}, () => const TeachersScreen(ownOnly: true)),
-    _Item(Icons.groups, 'المعلمون والمعلمات', {'student', 'admin'}, () => const TeachersScreen()),
+    _Item(Icons.checklist, 'منظم الدراسة', {'student'}, () => const OrganizerScreen(), 'char-organizer.svg'),
+    _Item(Icons.favorite, 'طمأنينة', {'student'}, () => const TamScreen(), 'char-fun.svg'),
+    _Item(Icons.badge, 'بطاقتي', {'teacher', 'staff'}, () => const TeachersScreen(ownOnly: true), 'teacher-char.jpg'),
+    _Item(Icons.groups, 'المعلمون والمعلمات', {'student', 'admin'}, () => const TeachersScreen(), 'teacher-char.jpg'),
     _Item(Icons.campaign, 'إدارة الإعلانات', {'admin'}, () => const AnnouncementsScreen()),
     _Item(Icons.local_library, 'المكتبة', {'admin', 'staff'}, () => const LibraryScreen()),
-    _Item(Icons.insights, 'لوحة تمانينة', {'admin'}, () => const TamDashScreen()),
-    _Item(Icons.support_agent, 'التواصل مع المرشد', {'student', 'teacher', 'staff', 'admin'}, () => const SupportScreen()),
-    _Item(Icons.lock, 'كلمة السر', {'teacher', 'staff', 'admin'}, () => const PasswordScreen()),
+    _Item(Icons.insights, 'لوحة طمأنينة', {'admin'}, () => const TamDashScreen()),
+    _Item(Icons.support_agent, 'التواصل مع المرشد', {'student', 'teacher', 'staff', 'admin'}, () => const SupportScreen(), 'char-feedback.svg'),
+    _Item(Icons.lock, 'كلمة السر', {'teacher', 'staff', 'admin'}, () => const PasswordScreen(), 'char-password.svg'),
   ];
 
   void _open(Widget w) =>
-      Navigator.push(context, MaterialPageRoute(builder: (_) => w)).then((_) => setState(() => _ann = _loadAnn()));
+      Navigator.push(context, MaterialPageRoute(builder: (_) => w)).then((_) => setState(() => _ann = _loadAnnouncements()));
+
+  Widget _bubble(_Item i, int n) {
+    final cs = Theme.of(context).colorScheme;
+    return FloatBubble(
+      anim: _c,
+      phase: (n % 3) * .3,
+      size: 142,
+      onTap: () => _open(i.page()),
+      child: ColoredBox(
+        color: cs.surface.withValues(alpha: .92),
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          if (i.asset != null)
+            ClipOval(child: SizedBox(width: 72, height: 72, child: ColoredBox(color: Colors.white, child: assetImage(i.asset!))))
+          else
+            Icon(i.icon, size: 44, color: cs.primary),
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Text(i.title, textAlign: TextAlign.center, maxLines: 2, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold)),
+          ),
+        ]),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1559,112 +1790,30 @@ class _HomeScreenState extends State<HomeScreen> {
         final items = _items.where((i) => i.roles.contains(session.role)).toList();
         return Scaffold(
           appBar: AppBar(
-            title: Text(session.isStudent
-                ? 'نخبة'
-                : '${roleLabels[session.role]} - ${session.name}'),
-            actions: [
-              if (session.loggedIn)
-                TextButton(onPressed: session.logout, child: const Text('خروج'))
-              else
-                TextButton(
-                  onPressed: () => _open(const LoginScreen()),
-                  child: const Text('دخول الكادر'),
-                ),
-            ],
+            title: Text(session.isStudent ? 'بوابة الطالب' : '${roleLabels[session.role]} - ${session.name}',
+                style: GoogleFonts.arefRuqaa(fontSize: 22, fontWeight: FontWeight.bold)),
+            actions: [if (session.loggedIn) TextButton(onPressed: session.logout, child: const Text('خروج'))],
           ),
-          body: DecoratedBox(
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage('assets/images/school-logo.jpg'),
-                fit: BoxFit.cover,
-                opacity: 0.12,
-              ),
-            ),
-            child: RefreshIndicator(
-            onRefresh: () async => setState(() => _ann = _loadAnn()),
+          body: RefreshIndicator(
+            onRefresh: () async => setState(() => _ann = _loadAnnouncements()),
             child: ListView(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
               children: [
-                const Center(child: Icon(Icons.school, size: 72)),
-                const SizedBox(height: 8),
-                const Text('مدرسة الملك عبد الله الثاني للتميز - الطفيلة',
-                    textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 12),
-                _announcements(),
-                const SizedBox(height: 12),
-                GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                  childAspectRatio: 1.12,
-                  children: [
-                    for (final i in items)
-                      Card(
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(12),
-                          onTap: () => _open(i.page()),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                width: 58,
-                                height: 58,
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.10),
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: Icon(i.icon, size: 32, color: Theme.of(context).colorScheme.primary),
-                              ),
-                              const SizedBox(height: 8),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 8),
-                                child: Text(i.title, textAlign: TextAlign.center,
-                                  style: const TextStyle(fontWeight: FontWeight.w700)),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
+                _announcementsBox(_ann),
+                const SizedBox(height: 22),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 16,
+                  runSpacing: 18,
+                  children: [for (var n = 0; n < items.length; n++) _bubble(items[n], n)],
                 ),
               ],
-            ),
             ),
           ),
         );
       },
     );
   }
-
-  Widget _announcements() => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('الإعلانات', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              const SizedBox(height: 6),
-              SizedBox(
-                child: FutureBuilder<List<Map<String, dynamic>>>(
-                  future: _ann,
-                  builder: (c, s) {
-                    if (s.connectionState != ConnectionState.done) {
-                      return const LinearProgressIndicator();
-                    }
-                    final items = s.data ?? [];
-                    if (items.isEmpty) return const Text('لا توجد إعلانات حالياً');
-                    return Column(
-                      children: [for (final a in items) ListTile(dense: true, title: Text(a['text'] ?? ''))],
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
 }
 
 // ===== main.dart =====
@@ -1677,15 +1826,75 @@ Future<void> main() async {
   runApp(const NokhbaApp());
 }
 
+final navKey = GlobalKey<NavigatorState>();
+final canGoBack = ValueNotifier<bool>(false);
+
+class _BackObserver extends NavigatorObserver {
+  void _upd() => WidgetsBinding.instance.addPostFrameCallback((_) => canGoBack.value = navKey.currentState?.canPop() ?? false);
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) => _upd();
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) => _upd();
+  @override
+  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) => _upd();
+}
+
+/// الخلفية: شعار المدرسة ثابت مع بلور خفيف + سهم رجوع عائم دائماً.
+Widget _appShell(BuildContext context, Widget? child) {
+  final dark = Theme.of(context).brightness == Brightness.dark;
+  final top = MediaQuery.of(context).padding.top + kToolbarHeight + 8;
+  return Stack(children: [
+    Positioned.fill(child: ColoredBox(color: dark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9))),
+    Positioned.fill(
+      child: ImageFiltered(
+        imageFilter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
+        child: Opacity(opacity: dark ? .45 : .85, child: Image.asset('assets/images/school-logo.jpg', fit: BoxFit.cover)),
+      ),
+    ),
+    if (child != null) Positioned.fill(child: child),
+    Positioned(
+      left: 12,
+      top: top,
+      child: ValueListenableBuilder<bool>(
+        valueListenable: canGoBack,
+        builder: (_, can, __) => can
+            ? Material(
+                color: const Color(0xFF3B82F6),
+                shape: const CircleBorder(),
+                elevation: 5,
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: () => navKey.currentState?.maybePop(),
+                  child: const Padding(padding: EdgeInsets.all(12), child: Icon(Icons.arrow_forward, color: Colors.white, size: 26)),
+                ),
+              )
+            : const SizedBox.shrink(),
+      ),
+    ),
+  ]);
+}
+
 class NokhbaApp extends StatelessWidget {
   const NokhbaApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     const seed = Color(0xFF2563EB);
+    ThemeData theme(Brightness b) {
+      final base = ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: b), useMaterial3: true);
+      return base.copyWith(
+        scaffoldBackgroundColor: Colors.transparent,
+        textTheme: GoogleFonts.cairoTextTheme(base.textTheme),
+        appBarTheme: const AppBarTheme(backgroundColor: Colors.transparent, elevation: 0, scrolledUnderElevation: 0),
+      );
+    }
+
     return MaterialApp(
       title: 'نخبة | Nokhba',
       debugShowCheckedModeBanner: false,
+      navigatorKey: navKey,
+      navigatorObservers: [_BackObserver()],
+      builder: _appShell,
       locale: const Locale('ar'),
       supportedLocales: const [Locale('ar')],
       localizationsDelegates: const [
@@ -1694,51 +1903,12 @@ class NokhbaApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       themeMode: ThemeMode.system,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: seed),
-        useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFFF1F5F9),
-        cardTheme: CardThemeData(
-          color: Colors.white.withValues(alpha: 0.92),
-          elevation: 3,
-          shadowColor: const Color(0x1A000000),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: Color(0xFFCBD5E1)),
-          ),
-          margin: const EdgeInsets.all(4),
-        ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFFF1F5F9),
-          foregroundColor: Color(0xFF1E293B),
-          centerTitle: true,
-          elevation: 0,
-        ),
-        textTheme: ThemeData.light().textTheme.apply(
-          bodyColor: const Color(0xFF334155),
-          displayColor: const Color(0xFF1E293B),
-        ),
+      theme: theme(Brightness.light),
+      darkTheme: theme(Brightness.dark),
+      home: ListenableBuilder(
+        listenable: session,
+        builder: (_, __) => session.loggedIn ? const HomeScreen() : const WelcomeScreen(),
       ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark),
-        useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFF0F172A),
-        cardTheme: CardThemeData(
-          color: const Color(0xFF1E293B),
-          elevation: 3,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: Color(0xFF334155)),
-          ),
-        ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF0F172A),
-          foregroundColor: Color(0xFFF8FAFC),
-          centerTitle: true,
-          elevation: 0,
-        ),
-      ),
-      home: const HomeScreen(),
     );
   }
 }
