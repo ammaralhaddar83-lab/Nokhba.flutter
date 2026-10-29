@@ -1508,6 +1508,7 @@ class _TeachersScreenState extends State<TeachersScreen> {
 }
 
 // ===== screens/home_screen.dart =====
+// واجهة الصفحة الرئيسية مستوحاة من تصميم موقع نخبة القديم.
 class _Item {
   final IconData icon;
   final String title;
@@ -1524,92 +1525,121 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late Future<List<Map<String, dynamic>>> _ann = _loadAnn();
+  bool _showMenu = false;
+  final PageController _galleryController = PageController(viewportFraction: .92);
+  int _galleryPage = 0;
 
   Future<List<Map<String, dynamic>>> _loadAnn() async {
-    final d = await sb
-        .from('announcements')
-        .select('id,text,created_at')
-        .order('created_at', ascending: false)
-        .limit(10);
+    final d = await sb.from('announcements').select('id,text,created_at')
+        .order('created_at', ascending: false).limit(10);
     return List<Map<String, dynamic>>.from(d);
   }
 
   static final _items = <_Item>[
-    _Item(Icons.calendar_month, 'الجداول', {'student', 'teacher', 'staff', 'admin'}, () => const ScheduleScreen()),
-    _Item(Icons.assignment, 'مهامي', {'student'}, () => const MyTasksScreen()),
-    _Item(Icons.checklist, 'منظم الدراسة', {'student'}, () => const OrganizerScreen()),
-    _Item(Icons.favorite, 'تمانينة', {'student'}, () => const TamScreen()),
-    _Item(Icons.badge, 'بطاقتي', {'teacher', 'staff'}, () => const TeachersScreen(ownOnly: true)),
-    _Item(Icons.groups, 'المعلمون والمعلمات', {'student', 'admin'}, () => const TeachersScreen()),
-    _Item(Icons.campaign, 'إدارة الإعلانات', {'admin'}, () => const AnnouncementsScreen()),
-    _Item(Icons.local_library, 'المكتبة', {'admin', 'staff'}, () => const LibraryScreen()),
-    _Item(Icons.insights, 'لوحة تمانينة', {'admin'}, () => const TamDashScreen()),
-    _Item(Icons.support_agent, 'التواصل مع المرشد', {'student', 'teacher', 'staff', 'admin'}, () => const SupportScreen()),
-    _Item(Icons.lock, 'كلمة السر', {'teacher', 'staff', 'admin'}, () => const PasswordScreen()),
+    _Item(Icons.calendar_month_rounded, 'الجداول', {'student', 'teacher', 'staff', 'admin'}, () => const ScheduleScreen()),
+    _Item(Icons.assignment_rounded, 'مهامي', {'student'}, () => const MyTasksScreen()),
+    _Item(Icons.checklist_rounded, 'منظم الدراسة', {'student'}, () => const OrganizerScreen()),
+    _Item(Icons.favorite_rounded, 'طمأنينة', {'student'}, () => const TamScreen()),
+    _Item(Icons.badge_rounded, 'بطاقتي', {'teacher', 'staff'}, () => const TeachersScreen(ownOnly: true)),
+    _Item(Icons.groups_rounded, 'المعلمون والمعلمات', {'student', 'admin'}, () => const TeachersScreen()),
+    _Item(Icons.campaign_rounded, 'إدارة الإعلانات', {'admin'}, () => const AnnouncementsScreen()),
+    _Item(Icons.local_library_rounded, 'المكتبة', {'admin', 'staff'}, () => const LibraryScreen()),
+    _Item(Icons.insights_rounded, 'لوحة طمأنينة', {'admin'}, () => const TamDashScreen()),
+    _Item(Icons.support_agent_rounded, 'التواصل مع المرشد', {'student', 'teacher', 'staff', 'admin'}, () => const SupportScreen()),
+    _Item(Icons.lock_rounded, 'كلمة السر', {'teacher', 'staff', 'admin'}, () => const PasswordScreen()),
   ];
 
-  void _open(Widget w) =>
-      Navigator.push(context, MaterialPageRoute(builder: (_) => w)).then((_) => setState(() => _ann = _loadAnn()));
+  @override
+  void dispose() {
+    _galleryController.dispose();
+    super.dispose();
+  }
+
+  void _open(Widget w) {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => w)).then((_) {
+      if (mounted) setState(() => _ann = _loadAnn());
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: session,
       builder: (context, _) {
+        final theme = Theme.of(context);
+        final dark = theme.brightness == Brightness.dark;
         final items = _items.where((i) => i.roles.contains(session.role)).toList();
         return Scaffold(
           appBar: AppBar(
-            title: Text(session.isStudent
-                ? 'نخبة'
-                : '${roleLabels[session.role]} - ${session.name}'),
+            centerTitle: true,
+            title: const Text('نخبة', style: TextStyle(fontWeight: FontWeight.w800)),
             actions: [
               if (session.loggedIn)
-                TextButton(onPressed: session.logout, child: const Text('خروج'))
+                IconButton(tooltip: 'خروج', icon: const Icon(Icons.logout_rounded), onPressed: () async {
+                  await session.logout();
+                  if (mounted) setState(() => _showMenu = false);
+                })
               else
-                TextButton(
-                  onPressed: () => _open(const LoginScreen()),
-                  child: const Text('دخول الكادر'),
-                ),
+                IconButton(tooltip: 'دخول الكادر', icon: const Icon(Icons.login_rounded), onPressed: () => _open(const LoginScreen())),
             ],
           ),
-          body: RefreshIndicator(
-            onRefresh: () async => setState(() => _ann = _loadAnn()),
-            child: ListView(
-              padding: const EdgeInsets.all(12),
-              children: [
-                const Center(child: Icon(Icons.school, size: 72)),
-                const SizedBox(height: 8),
-                const Text('مدرسة الملك عبد الله الثاني للتميز - الطفيلة',
-                    textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 12),
-                _announcements(),
-                const SizedBox(height: 12),
-                GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                  childAspectRatio: 1.25,
-                  children: [
-                    for (final i in items)
-                      Card(
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(12),
-                          onTap: () => _open(i.page()),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(i.icon, size: 34, color: Theme.of(context).colorScheme.primary),
-                              const SizedBox(height: 8),
-                              Text(i.title, textAlign: TextAlign.center),
-                            ],
-                          ),
-                        ),
-                      ),
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                colors: dark ? const [Color(0xFF0B1220), Color(0xFF111C32), Color(0xFF0B1220)]
+                    : const [Color(0xFFEAF3FF), Color(0xFFF8FAFF), Color(0xFFEFF6FF)]),
+            ),
+            child: RefreshIndicator(
+              onRefresh: () async => setState(() => _ann = _loadAnn()),
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
+                children: [
+                  _schoolHeading(context),
+                  const SizedBox(height: 16),
+                  _schoolGallery(context),
+                  const SizedBox(height: 18),
+                  _announcements(context),
+                  const SizedBox(height: 22),
+                  if (!_showMenu && session.isStudent) ...[
+                    Text('أهلاً بك في نخبة', textAlign: TextAlign.center,
+                      style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 5),
+                    Text('اختر بوابتك للبدء', textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                    const SizedBox(height: 16),
+                    _portalRow(context, [
+                      _PortalData('الطالب', Icons.school_rounded, const Color(0xFF2563EB), () => setState(() => _showMenu = true)),
+                      _PortalData('دخول الكادر', Icons.badge_rounded, const Color(0xFF7C3AED), () => _open(const LoginScreen())),
+                    ]),
+                  ] else ...[
+                    Row(children: [
+                      Expanded(child: Text(session.isStudent ? 'أقسام الطالب' : '${roleLabels[session.role]} - ${session.name}',
+                        style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800))),
+                      if (_showMenu && session.isStudent)
+                        TextButton.icon(onPressed: () => setState(() => _showMenu = false),
+                          icon: const Icon(Icons.arrow_forward_rounded), label: const Text('الرئيسية')),
+                    ]),
+                    const SizedBox(height: 12),
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: items.length,
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2, mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: .98),
+                      itemBuilder: (context, index) {
+                        final item = items[index];
+                        final colors = _portalColors[index % _portalColors.length];
+                        return _featureCard(context, item, colors.$1, colors.$2);
+                      },
+                    ),
                   ],
-                ),
-              ],
+                  const SizedBox(height: 20),
+                  Center(child: Text('مدرسة الملك عبد الله الثاني للتميز – الطفيلة',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant))),
+                ],
+              ),
             ),
           ),
         );
@@ -1617,34 +1647,166 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _announcements() => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('الإعلانات', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              const SizedBox(height: 6),
-              SizedBox(
-                child: FutureBuilder<List<Map<String, dynamic>>>(
-                  future: _ann,
-                  builder: (c, s) {
-                    if (s.connectionState != ConnectionState.done) {
-                      return const LinearProgressIndicator();
-                    }
-                    final items = s.data ?? [];
-                    if (items.isEmpty) return const Text('لا توجد إعلانات حالياً');
-                    return Column(
-                      children: [for (final a in items) ListTile(dense: true, title: Text(a['text'] ?? ''))],
-                    );
-                  },
-                ),
-              ),
-            ],
+  Widget _schoolHeading(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(children: [
+      Container(
+        width: 76, height: 76,
+        decoration: BoxDecoration(shape: BoxShape.circle,
+          gradient: const LinearGradient(colors: [Color(0xFF2563EB), Color(0xFF06B6D4)]),
+          boxShadow: [BoxShadow(color: const Color(0xFF2563EB).withValues(alpha: .24), blurRadius: 18, offset: const Offset(0, 7))]),
+        child: const Icon(Icons.school_rounded, color: Colors.white, size: 42),
+      ),
+      const SizedBox(height: 12),
+      Text('مدرسة الملك عبد الله الثاني للتميز', textAlign: TextAlign.center,
+        style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900, height: 1.35)),
+      const SizedBox(height: 4),
+      const Text('الطفيلة  •  NOKHBA APP', textAlign: TextAlign.center,
+        style: TextStyle(color: Color(0xFF3B82F6), fontWeight: FontWeight.w700, letterSpacing: .5)),
+    ]);
+  }
+
+  Widget _schoolGallery(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(children: [
+      SizedBox(
+        height: 190,
+        child: PageView.builder(
+          controller: _galleryController,
+          itemCount: 20,
+          onPageChanged: (v) => setState(() => _galleryPage = v),
+          itemBuilder: (context, index) => Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(22),
+              child: Stack(fit: StackFit.expand, children: [
+                Image.asset('assets/images/t/h${(index + 1).toString().padLeft(2, '0')}.jpg', fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFF1D4ED8), Color(0xFF06B6D4)])),
+                    child: const Icon(Icons.photo_library_rounded, color: Colors.white, size: 60))),
+                DecoratedBox(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Colors.black.withValues(alpha: .68)]))),
+                const Positioned(right: 15, bottom: 15, child: Text('صور من مدرستنا',
+                  style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800))),
+                Positioned(left: 14, bottom: 18, child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(color: Colors.black.withValues(alpha: .35), borderRadius: BorderRadius.circular(20)),
+                  child: Text('${index + 1} / 20', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)))),
+              ]),
+            ),
           ),
         ),
-      );
+      ),
+      const SizedBox(height: 8),
+      Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(20, (i) => AnimatedContainer(
+        duration: const Duration(milliseconds: 180), margin: const EdgeInsets.symmetric(horizontal: 2),
+        width: _galleryPage == i ? 16 : 5, height: 5,
+        decoration: BoxDecoration(color: _galleryPage == i ? const Color(0xFF3B82F6) : theme.colorScheme.outlineVariant,
+          borderRadius: BorderRadius.circular(10)),
+      ))),
+    ]);
+  }
+
+  Widget _announcements(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(color: theme.cardColor.withValues(alpha: .94), borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: .12)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: .04), blurRadius: 14, offset: const Offset(0, 5))]),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(width: 40, height: 40, decoration: BoxDecoration(color: const Color(0xFFDBEAFE), borderRadius: BorderRadius.circular(13)),
+            child: const Icon(Icons.campaign_rounded, color: Color(0xFF1D4ED8))),
+          const SizedBox(width: 10),
+          Expanded(child: Text('لوحة الإعلانات', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900))),
+          IconButton(tooltip: 'تحديث', onPressed: () => setState(() => _ann = _loadAnn()), icon: const Icon(Icons.refresh_rounded)),
+        ]),
+        const SizedBox(height: 8),
+        FutureBuilder<List<Map<String, dynamic>>>(
+          future: _ann,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) return const LinearProgressIndicator();
+            if (snapshot.hasError) return const Text('تعذر تحميل الإعلانات حالياً');
+            final data = snapshot.data ?? [];
+            if (data.isEmpty) return const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('لا توجد إعلانات حالياً'));
+            return Column(children: [for (final a in data.take(4)) Container(
+              width: double.infinity, margin: const EdgeInsets.only(top: 7), padding: const EdgeInsets.all(11),
+              decoration: BoxDecoration(color: theme.colorScheme.primary.withValues(alpha: .055), borderRadius: BorderRadius.circular(12)),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Icon(Icons.notifications_active_outlined, size: 19, color: Color(0xFF3B82F6)),
+                const SizedBox(width: 8), Expanded(child: Text('${a['text'] ?? ''}', style: const TextStyle(height: 1.5))),
+              ]),
+            )]),
+          },
+        ),
+      ]),
+    );
+  }
+
+  Widget _portalRow(BuildContext context, List<_PortalData> portals) => Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [for (var i = 0; i < portals.length; i++) Expanded(child: _portal(context, portals[i]))],
+  );
+
+  Widget _portal(BuildContext context, _PortalData data) => InkWell(
+    borderRadius: BorderRadius.circular(22), onTap: data.onTap,
+    child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8), child: Column(children: [
+      Container(width: 94, height: 94,
+        decoration: BoxDecoration(shape: BoxShape.circle,
+          gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
+            colors: [data.color, data.color.withValues(alpha: .72)]),
+          boxShadow: [BoxShadow(color: data.color.withValues(alpha: .28), blurRadius: 16, offset: const Offset(0, 7))],
+          border: Border.all(color: Colors.white.withValues(alpha: .8), width: 3)),
+        child: Icon(data.icon, color: Colors.white, size: 42)),
+      const SizedBox(height: 10), Text(data.title, textAlign: TextAlign.center,
+        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+    ])),
+  );
+
+  Widget _featureCard(BuildContext context, _Item item, Color first, Color second) {
+    final theme = Theme.of(context);
+    return Material(
+      color: theme.cardColor,
+      borderRadius: BorderRadius.circular(22), clipBehavior: Clip.antiAlias,
+      child: InkWell(onTap: () => _open(item.page()), child: Container(
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: first.withValues(alpha: .22)),
+          boxShadow: [BoxShadow(color: first.withValues(alpha: .07), blurRadius: 12, offset: const Offset(0, 5))]),
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Container(width: 70, height: 70,
+            decoration: BoxDecoration(shape: BoxShape.circle,
+              gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [first, second]),
+              boxShadow: [BoxShadow(color: first.withValues(alpha: .23), blurRadius: 12, offset: const Offset(0, 5))]),
+            child: Icon(item.icon, size: 34, color: Colors.white)),
+          const SizedBox(height: 13),
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: Text(item.title,
+            textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5))),
+          const SizedBox(height: 5),
+          Icon(Icons.arrow_outward_rounded, size: 16, color: first.withValues(alpha: .8)),
+        ]),
+      )),
+    );
+  }
 }
+
+class _PortalData {
+  final String title;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  const _PortalData(this.title, this.icon, this.color, this.onTap);
+}
+
+const _portalColors = <(Color, Color)>[
+  (Color(0xFF2563EB), Color(0xFF06B6D4)),
+  (Color(0xFF7C3AED), Color(0xFFA855F7)),
+  (Color(0xFF059669), Color(0xFF34D399)),
+  (Color(0xFFDB2777), Color(0xFFF472B6)),
+  (Color(0xFFEA580C), Color(0xFFFBBF24)),
+  (Color(0xFF4F46E5), Color(0xFF818CF8)),
+];
 
 // ===== main.dart =====
 Future<void> main() async {
