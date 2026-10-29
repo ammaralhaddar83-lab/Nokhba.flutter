@@ -1736,8 +1736,8 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 const Icon(Icons.notifications_active_outlined, size: 19, color: Color(0xFF3B82F6)),
                 const SizedBox(width: 8), Expanded(child: Text('${a['text'] ?? ''}', style: const TextStyle(height: 1.5))),
-              ]),
-            )]),
+              ]),             
+            )]);
           },
         ),
       ]),
