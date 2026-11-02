@@ -1851,7 +1851,28 @@ Widget _appShell(BuildContext context, Widget? child) {
         child: Opacity(opacity: dark ? .45 : .85, child: Image.asset('assets/images/school-logo.jpg', fit: BoxFit.cover)),
       ),
     ),
-    if (child != null) Positioned.fill(child: child),
+    if (child != null)
+      Positioned.fill(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 900),
+            child: Padding(
+              padding: const EdgeInsets.all(15),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: (dark ? const Color(0xFF1E293B) : Colors.white).withValues(alpha: .58),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: const [BoxShadow(color: Color(0x1A000000), blurRadius: 12, offset: Offset(0, 4))],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(5),
+                  child: child!,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     Positioned(
       left: 12,
       top: top,
@@ -1881,11 +1902,49 @@ class NokhbaApp extends StatelessWidget {
   Widget build(BuildContext context) {
     const seed = Color(0xFF2563EB);
     ThemeData theme(Brightness b) {
-      final base = ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: b), useMaterial3: true);
+      final dark = b == Brightness.dark;
+      final scheme = ColorScheme.fromSeed(seedColor: seed, brightness: b).copyWith(
+        primary: dark ? const Color(0xFF3B82F6) : const Color(0xFF2563EB),
+        surface: dark ? const Color(0xFF1E293B) : Colors.white,
+      );
+      final base = ThemeData(colorScheme: scheme, useMaterial3: true);
       return base.copyWith(
         scaffoldBackgroundColor: Colors.transparent,
-        textTheme: GoogleFonts.cairoTextTheme(base.textTheme),
-        appBarTheme: const AppBarTheme(backgroundColor: Colors.transparent, elevation: 0, scrolledUnderElevation: 0),
+        textTheme: GoogleFonts.cairoTextTheme(base.textTheme).apply(
+          bodyColor: dark ? const Color(0xFFCBD5E1) : const Color(0xFF334155),
+          displayColor: dark ? const Color(0xFFF8FAFC) : const Color(0xFF1E293B),
+        ),
+        appBarTheme: AppBarTheme(
+          backgroundColor: Colors.transparent,
+          foregroundColor: dark ? const Color(0xFFF8FAFC) : const Color(0xFF1E293B),
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          centerTitle: true,
+        ),
+        cardTheme: CardThemeData(
+          color: scheme.surface.withValues(alpha: .94),
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: scheme.surface.withValues(alpha: .88),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: dark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+          ),
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            backgroundColor: scheme.primary,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            textStyle: GoogleFonts.cairo(fontWeight: FontWeight.bold),
+          ),
+        ),
       );
     }
 
