@@ -1,7 +1,7 @@
 name: nokhba
 description: تطبيق نخبة - مدرسة الملك عبد الله الثاني للتميز (Flutter أصلي)
 publish_to: "none"
-version: 2.0.0+1
+version: 3.0.0+1
 
 environment:
   sdk: ">=3.6.0 <4.0.0"
@@ -16,13 +16,24 @@ dependencies:
   image_picker: ^1.1.2
   google_fonts: ^6.2.1
   flutter_svg: ^2.0.10+1
+  url_launcher: ^6.3.0
+  qr_flutter: ^4.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.1
 
 flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/images/t/
+    - assets/images/h/
+
+flutter_launcher_icons:
+  android: "ic_launcher"
+  image_path: "assets/images/icon-512.png"
+  adaptive_icon_background: "#C9C8C4"
+  adaptive_icon_foreground: "assets/images/icon-adaptive-fg.png"
