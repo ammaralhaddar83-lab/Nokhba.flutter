@@ -12,6 +12,17 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide Session;
+import 'package:url_launcher/url_launcher.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+
+part 'parts/shell.dart';
+part 'parts/landing.dart';
+part 'parts/menu.dart';
+part 'parts/quiz_data.dart';
+part 'parts/fun.dart';
+part 'parts/organizer.dart';
+part 'parts/panels.dart';
+part 'parts/staff.dart';
 
 // ===== core/config.dart =====
 // بيانات الاتصال بـ Supabase (Project Settings > API).
@@ -282,7 +293,7 @@ class _SupportScreenState extends State<SupportScreen> {
       _m.clear();
       _c.clear();
       if (mounted) toast(context, 'وصلت رسالتك للمرشد بسرية. شكراً لشجاعتك 💚');
-      if (session.isAdmin) setState(() => _inbox = _load());
+      if ((session.isAdmin || session.role == 'staff')) setState(() => _inbox = _load());
     } catch (e) {
       if (mounted) toast(context, 'تعذر الإرسال: $e');
     }
@@ -312,7 +323,7 @@ class _SupportScreenState extends State<SupportScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(automaticallyImplyLeading: false, title: const Text('التواصل مع المرشد (سري)')),
+        appBar: AppBar(automaticallyImplyLeading: false, leadingWidth: 118, leading: const BackPill(), title: const Text('التواصل مع المرشد (سري)')),
         body: ListView(padding: const EdgeInsets.all(16), children: [
           const Text('يمكنك إرسال رسالتك بدون ذكر اسمك. وسيلة التواصل اختيارية.'),
           const SizedBox(height: 12),
@@ -329,7 +340,7 @@ class _SupportScreenState extends State<SupportScreen> {
           ),
           const SizedBox(height: 12),
           FilledButton(onPressed: _send, child: const Text('إرسال')),
-          if (session.isAdmin) ...[
+          if ((session.isAdmin || session.role == 'staff')) ...[
             const Divider(height: 32),
             const Text('الوارد', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             Loader<List<Map<String, dynamic>>>(
@@ -419,7 +430,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(automaticallyImplyLeading: false, title: const Text('إدارة الإعلانات')),
+        appBar: AppBar(automaticallyImplyLeading: false, leadingWidth: 118, leading: const BackPill(), title: const Text('إدارة الإعلانات')),
         body: Column(children: [
           Padding(
             padding: const EdgeInsets.all(12),
@@ -522,7 +533,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   Widget build(BuildContext context) {
     final today = DateTime.now().toIso8601String().substring(0, 10);
     return Scaffold(
-      appBar: AppBar(automaticallyImplyLeading: false, title: const Text('المكتبة - الإعارات')),
+      appBar: AppBar(automaticallyImplyLeading: false, leadingWidth: 118, leading: const BackPill(), title: const Text('المكتبة - الإعارات')),
       floatingActionButton: FloatingActionButton(onPressed: _add, child: const Icon(Icons.add)),
       body: Loader<List<Map<String, dynamic>>>(
         future: _f,
@@ -576,7 +587,7 @@ class _PasswordScreenState extends State<PasswordScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(automaticallyImplyLeading: false, title: const Text('تغيير كلمة السر')),
+        appBar: AppBar(automaticallyImplyLeading: false, leadingWidth: 118, leading: const BackPill(), title: const Text('تغيير كلمة السر')),
         body: ListView(padding: const EdgeInsets.all(20), children: [
           _f('كلمة السر الحالية', _o),
           _f('كلمة السر الجديدة', _n),
@@ -619,7 +630,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(automaticallyImplyLeading: false, title: Text(widget.admin ? 'بوابة الإدارة' : 'بوابة المعلمين والمعلمات')),
+        appBar: AppBar(automaticallyImplyLeading: false, leadingWidth: 118, leading: const BackPill(), title: Text(widget.admin ? 'بوابة الإدارة' : 'بوابة المعلمين والمعلمات')),
         body: ListView(
           padding: const EdgeInsets.all(20),
           children: [
@@ -695,7 +706,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(automaticallyImplyLeading: false, 
+      appBar: AppBar(automaticallyImplyLeading: false, leadingWidth: 118, leading: const BackPill(), 
         title: const Text('الجداول'),
         actions: [
           if (session.isAdmin && !exams)
@@ -917,7 +928,7 @@ class _MyTasksScreenState extends State<MyTasksScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(automaticallyImplyLeading: false, title: const Text('مهامي')),
+        appBar: AppBar(automaticallyImplyLeading: false, leadingWidth: 118, leading: const BackPill(), title: const Text('مهامي')),
         body: Column(children: [
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -1006,148 +1017,6 @@ class _TaskCardState extends State<_TaskCard> {
   }
 }
 
-// ===== screens/organizer_screen.dart =====
-/// منظم الدراسة: مهام محلية على الجهاز (بدون قاعدة بيانات) + مؤقت لكل مهمة + شريط تقدم.
-class OrganizerScreen extends StatefulWidget {
-  const OrganizerScreen({super.key});
-  @override
-  State<OrganizerScreen> createState() => _OrganizerScreenState();
-}
-
-class _OrganizerScreenState extends State<OrganizerScreen> {
-  static const types = ['قراءة', 'حفظ', 'حل واجبات', 'مراجعة'];
-  List<Map<String, dynamic>> tasks = [];
-  final _name = TextEditingController();
-  final _min = TextEditingController(text: '25');
-  String type = types.first;
-  int? running; // فهرس المهمة الجارية
-  int remaining = 0;
-  Timer? _t;
-
-  @override
-  void initState() {
-    super.initState();
-    SharedPreferences.getInstance().then((p) {
-      final s = p.getString('appTasks');
-      if (s != null) setState(() => tasks = List<Map<String, dynamic>>.from(jsonDecode(s)));
-    });
-  }
-
-  @override
-  void dispose() {
-    _t?.cancel();
-    super.dispose();
-  }
-
-  Future<void> _save() async =>
-      (await SharedPreferences.getInstance()).setString('appTasks', jsonEncode(tasks));
-
-  void _add() {
-    final n = _name.text.trim();
-    final m = int.tryParse(_min.text) ?? 0;
-    if (n.isEmpty || m <= 0) return;
-    setState(() => tasks.add({'name': n, 'type': type, 'minutes': m, 'done': false}));
-    _name.clear();
-    _save();
-  }
-
-  void _start(int i) {
-    _t?.cancel();
-    running = i;
-    remaining = (tasks[i]['minutes'] as int) * 60;
-    _t = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (remaining <= 1) {
-        t.cancel();
-        setState(() { tasks[i]['done'] = true; running = null; remaining = 0; });
-        _save();
-      } else {
-        setState(() => remaining--);
-      }
-    });
-    setState(() {});
-  }
-
-  void _stop() {
-    _t?.cancel();
-    setState(() => running = null);
-  }
-
-  String _fmt(int s) => '${(s ~/ 60).toString().padLeft(2, '0')}:${(s % 60).toString().padLeft(2, '0')}';
-
-  @override
-  Widget build(BuildContext context) {
-    final done = tasks.where((t) => t['done'] == true).length;
-    return Scaffold(
-      appBar: AppBar(automaticallyImplyLeading: false, title: const Text('منظم الدراسة')),
-      body: ListView(padding: const EdgeInsets.all(12), children: [
-        if (tasks.isNotEmpty) ...[
-          LinearProgressIndicator(value: done / tasks.length, minHeight: 10),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Text('أنجزت $done من ${tasks.length}', textAlign: TextAlign.center),
-          ),
-        ],
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(children: [
-              TextField(controller: _name, decoration: const InputDecoration(labelText: 'اسم المهمة')),
-              Row(children: [
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    value: type,
-                    items: [for (final t in types) DropdownMenuItem(value: t, child: Text(t))],
-                    onChanged: (v) => setState(() => type = v ?? type),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                SizedBox(
-                  width: 90,
-                  child: TextField(
-                    controller: _min,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'دقائق'),
-                  ),
-                ),
-              ]),
-              const SizedBox(height: 8),
-              FilledButton(onPressed: _add, child: const Text('إضافة مهمة')),
-            ]),
-          ),
-        ),
-        for (var i = 0; i < tasks.length; i++)
-          Card(
-            child: ListTile(
-              leading: Checkbox(
-                value: tasks[i]['done'] == true,
-                onChanged: (v) { setState(() => tasks[i]['done'] = v ?? false); _save(); },
-              ),
-              title: Text('${tasks[i]['name']}',
-                  style: TextStyle(decoration: tasks[i]['done'] == true ? TextDecoration.lineThrough : null)),
-              subtitle: Text(running == i
-                  ? _fmt(remaining)
-                  : '${tasks[i]['type']} • ${tasks[i]['minutes']} دقيقة'),
-              trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                IconButton(
-                  icon: Icon(running == i ? Icons.stop : Icons.play_arrow),
-                  onPressed: tasks[i]['done'] == true ? null : () => running == i ? _stop() : _start(i),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  onPressed: () {
-                    if (running == i) _stop();
-                    setState(() => tasks.removeAt(i));
-                    _save();
-                  },
-                ),
-              ]),
-            ),
-          ),
-      ]),
-    );
-  }
-}
-
 // ===== screens/tam_screen.dart =====
 /// طمأنينة: اختيار المزاج ← سبب ← رسالة + تمرين تنفس + رسالة سرية للمرشد.
 class TamScreen extends StatefulWidget {
@@ -1222,7 +1091,7 @@ class _TamScreenState extends State<TamScreen> {
         OutlinedButton(onPressed: _reset, child: const Text('رجوع')),
       ]);
     }
-    return Scaffold(appBar: AppBar(automaticallyImplyLeading: false, title: const Text('طمأنينة')), body: body);
+    return Scaffold(appBar: AppBar(automaticallyImplyLeading: false, leadingWidth: 118, leading: const BackPill(), title: const Text('طمأنينة')), body: body);
   }
 }
 
@@ -1288,7 +1157,20 @@ class _TamDashScreenState extends State<TamDashScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(automaticallyImplyLeading: false, title: const Text('لوحة طمأنينة')),
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          leadingWidth: 118,
+          leading: const BackPill(),
+          title: const Text('لوحة طمأنينة'),
+          actions: [
+            IconButton(
+              tooltip: 'طلبات الدعم السرية',
+              icon: const Icon(Icons.inbox_outlined),
+              onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const SupportScreen())),
+            ),
+            IconButton(tooltip: 'ملصق رمز QR', icon: const Icon(Icons.qr_code_2), onPressed: () => showTamPoster(context)),
+          ],
+        ),
         body: Column(children: [
           Padding(
             padding: const EdgeInsets.all(8),
@@ -1326,173 +1208,6 @@ class _TamDashScreenState extends State<TamDashScreen> {
                         ),
                         SizedBox(width: 40, child: Text('${counts[m.key] ?? 0}', textAlign: TextAlign.end)),
                       ]),
-                    ),
-                ]);
-              },
-            ),
-          ),
-        ]),
-      );
-}
-
-// ===== screens/teachers_screen.dart =====
-/// دليل المعلمين/الكادر. الطالب والمدير يتصفحان بالأقسام، والمعلم/الكادر يرى بطاقته فقط ويعدّلها.
-class TeachersScreen extends StatefulWidget {
-  final bool ownOnly;
-  const TeachersScreen({super.key, this.ownOnly = false});
-  @override
-  State<TeachersScreen> createState() => _TeachersScreenState();
-}
-
-class _TeachersScreenState extends State<TeachersScreen> {
-  String cat = 'tm';
-  late Future<List<Map<String, dynamic>>> _f = _load();
-
-  Future<List<Map<String, dynamic>>> _load() async => List<Map<String, dynamic>>.from(await sb
-      .from('teachers')
-      .select('id,username,name,specialty,photo,bio,category,gender,classes,tasks_text,years_experience')
-      .order('created_at'));
-
-  /// نفس منطق الويب: category + gender تحدد القسم.
-  String _key(Map<String, dynamic> t) {
-    final c = t['category'] as String?;
-    if (c == null || c == 'teacher') return t['gender'] == 'f' ? 'tf' : 'tm';
-    return c;
-  }
-
-  bool _canEdit(Map<String, dynamic> t) =>
-      session.isAdmin || (session.loggedIn && t['username'] != null && t['username'] == session.username);
-
-  Future<void> _edit(Map<String, dynamic> t) async {
-    final name = TextEditingController(text: t['name'] ?? '');
-    final spec = TextEditingController(text: t['specialty'] ?? '');
-    final bio = TextEditingController(text: t['bio'] ?? '');
-    final yrs = TextEditingController(text: '${t['years_experience'] ?? ''}');
-    String? photo;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => StatefulBuilder(
-        builder: (c, set) => AlertDialog(
-          title: const Text('تعديل البطاقة'),
-          content: SingleChildScrollView(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              TextField(controller: name, decoration: const InputDecoration(labelText: 'الاسم')),
-              TextField(controller: spec, decoration: const InputDecoration(labelText: 'التخصص')),
-              TextField(controller: yrs, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'سنوات الخبرة')),
-              TextField(controller: bio, maxLines: 3, decoration: const InputDecoration(labelText: 'نبذة')),
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                icon: const Icon(Icons.photo),
-                label: Text(photo == null ? 'تغيير الصورة' : 'تم اختيار صورة'),
-                onPressed: () async {
-                  final f = await ImagePicker().pickImage(
-                      source: ImageSource.gallery, maxWidth: 300, maxHeight: 300, imageQuality: 80);
-                  if (f == null) return;
-                  final bytes = await File(f.path).readAsBytes();
-                  set(() => photo = 'data:image/jpeg;base64,${base64Encode(bytes)}');
-                },
-              ),
-            ]),
-          ),
-          actions: [TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('حفظ'))],
-        ),
-      ),
-    );
-    if (ok != true) return;
-    final patch = {
-      'name': name.text.trim(),
-      'specialty': spec.text.trim(),
-      'bio': bio.text.trim(),
-      'years_experience': int.tryParse(yrs.text),
-      if (photo != null) 'photo': photo,
-    };
-    try {
-      if (session.isAdmin) {
-        await sb.from('teachers').update(patch).eq('id', t['id']);
-      } else {
-        await sb.rpc('update_my_card_v3', params: {
-          'p_name': patch['name'],
-          'p_specialty': patch['specialty'],
-          'p_bio': patch['bio'],
-          'p_photo': patch['photo'],
-          'p_years': patch['years_experience'],
-        });
-      }
-      if (mounted) {
-        toast(context, 'تم الحفظ');
-        setState(() => _f = _load());
-      }
-    } catch (e) {
-      if (mounted) toast(context, 'تعذر الحفظ: $e');
-    }
-  }
-
-  void _details(Map<String, dynamic> t) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Center(
-            child: ClipOval(child: SizedBox(width: 100, height: 100, child: dbImage(t['photo']))),
-          ),
-          const SizedBox(height: 12),
-          Text('${t['name']}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          if (t['specialty'] != null) Text('${t['specialty']}'),
-          if (t['years_experience'] != null) Text('سنوات الخبرة: ${t['years_experience']}'),
-          if (t['bio'] != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text('${t['bio']}')),
-          if (_canEdit(t))
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: FilledButton.icon(
-                icon: const Icon(Icons.edit),
-                label: const Text('تعديل'),
-                onPressed: () { Navigator.pop(context); _edit(t); },
-              ),
-            ),
-        ]),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(automaticallyImplyLeading: false, title: Text(widget.ownOnly ? 'بطاقتي' : 'المعلمون والمعلمات')),
-        body: Column(children: [
-          if (!widget.ownOnly)
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.all(8),
-              child: Row(children: [
-                for (final c in staffCategories.entries)
-                  Padding(
-                    padding: const EdgeInsetsDirectional.only(end: 6),
-                    child: ChoiceChip(label: Text(c.value), selected: cat == c.key, onSelected: (_) => setState(() => cat = c.key)),
-                  ),
-              ]),
-            ),
-          Expanded(
-            child: Loader<List<Map<String, dynamic>>>(
-              future: _f,
-              builder: (all) {
-                final items = widget.ownOnly
-                    ? all.where((t) => t['username'] != null && t['username'] == session.username).toList()
-                    : all.where((t) => _key(t) == cat).toList();
-                if (items.isEmpty) {
-                  return Empty(widget.ownOnly
-                      ? 'لم يُربط حسابك ببطاقة بعد، تواصل مع الإدارة'
-                      : 'لم تتم إضافة أحد في هذا القسم بعد');
-                }
-                return ListView(children: [
-                  for (final t in items)
-                    ListTile(
-                      leading: CircleAvatar(
-                        child: ClipOval(child: SizedBox(width: 40, height: 40, child: dbImage(t['photo']))),
-                      ),
-                      title: Text('${t['name']}'),
-                      subtitle: Text('${t['specialty'] ?? ''}'),
-                      onTap: () => _details(t),
                     ),
                 ]);
               },
@@ -1596,226 +1311,6 @@ Widget _announcementsBox(Future<List<Map<String, dynamic>>> f) => _Panel(
       ),
     );
 
-// ===== screens/welcome_screen.dart =====
-class _Acc extends StatelessWidget {
-  const _Acc(this.title, this.image, this.text);
-  final String title, image, text;
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      margin: const EdgeInsets.only(top: 12),
-      decoration: BoxDecoration(
-        color: cs.surface.withValues(alpha: .78),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: cs.outlineVariant),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          title: Text(title, style: GoogleFonts.arefRuqaa(fontSize: 22, fontWeight: FontWeight.bold, color: const Color(0xFF2563EB))),
-          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          children: [
-            Row(children: [
-              ClipOval(child: SizedBox(width: 84, height: 84, child: assetImage(image))),
-              const SizedBox(width: 12),
-              Expanded(child: Text(text, style: const TextStyle(height: 1.9))),
-            ]),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class WelcomeScreen extends StatefulWidget {
-  const WelcomeScreen({super.key});
-  @override
-  State<WelcomeScreen> createState() => _WelcomeScreenState();
-}
-
-class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat(reverse: true);
-  late Future<List<Map<String, dynamic>>> _ann = _loadAnnouncements();
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  Widget _portal(String label, String image, double phase, VoidCallback onTap, {Color bg = Colors.white}) => Column(children: [
-        FloatBubble(
-          anim: _c,
-          phase: phase,
-          size: 150,
-          onTap: onTap,
-          child: Stack(fit: StackFit.expand, children: [
-            ColoredBox(color: bg),
-            assetImage(image),
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Color.fromRGBO(15, 23, 42, .85)]),
-                ),
-                child: Text(label, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-              ),
-            ),
-          ]),
-        ),
-        const SizedBox(height: 12),
-      ]);
-
-  @override
-  Widget build(BuildContext context) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-    return Scaffold(
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async => setState(() => _ann = _loadAnnouncements()),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
-            children: [
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  'مدرسة الملك عبد الله الثاني للتميز - الطفيلة',
-                  maxLines: 1,
-                  style: GoogleFonts.arefRuqaa(
-                    fontSize: 30,
-                    fontWeight: FontWeight.bold,
-                    color: onSurface,
-                    shadows: const [Shadow(color: Color.fromRGBO(255, 255, 255, .8), blurRadius: 8)],
-                  ),
-                ),
-              ),
-              const _Acc('رؤيتنا', 'vision.jpg', 'نحو مدرسة رائدة في التميز والتعلم المستدام، وبيئة آمنة وشراكة فاعلة، وقيادة تشاركية عادلة وشفافة.'),
-              const _Acc('رسالتنا', 'mission.jpg',
-                  'تلتزم المدرسة بتقديم تعليم نوعي يركز على تحسين تعلم الطلبة ورفع أدائهم، وتوفير بيئة مدرسية آمنة ونظيفة، وبناء شراكات فاعلة مع الأسرة والمجتمع المحلي، وتمكين الكادر المدرسي من المشاركة في القيادة وتحمل المسؤوليات بعدالة وشفافية؛ لتحقيق التحسين المستمر والتميز المدرسي.'),
-              _announcementsBox(_ann),
-              const SizedBox(height: 24),
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 18,
-                children: [
-                  _portal('بوابة الطالب', 'student-char.jpg', 0, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HomeScreen()))),
-                  _portal('بوابة المعلمين والمعلمات', 'teacher-char.jpg', .3, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()))),
-                  _portal('بوابة الإدارة', 'office.svg', .6, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen(admin: true))), bg: const Color(0xFFF1F5F9)),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ===== screens/home_screen.dart (قائمة الفقاعات) =====
-class _Item {
-  final IconData icon;
-  final String title;
-  final Set<String> roles;
-  final Widget Function() page;
-  final String? asset;
-  const _Item(this.icon, this.title, this.roles, this.page, [this.asset]);
-}
-
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat(reverse: true);
-  late Future<List<Map<String, dynamic>>> _ann = _loadAnnouncements();
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  static final _items = <_Item>[
-    _Item(Icons.calendar_month, 'الجداول', {'student', 'teacher', 'staff', 'admin'}, () => const ScheduleScreen(), 'char-schedule.svg'),
-    _Item(Icons.assignment, 'مهامي', {'student'}, () => const MyTasksScreen()),
-    _Item(Icons.checklist, 'منظم الدراسة', {'student'}, () => const OrganizerScreen(), 'char-organizer.svg'),
-    _Item(Icons.favorite, 'طمأنينة', {'student'}, () => const TamScreen(), 'char-fun.svg'),
-    _Item(Icons.badge, 'بطاقتي', {'teacher', 'staff'}, () => const TeachersScreen(ownOnly: true), 'teacher-char.jpg'),
-    _Item(Icons.groups, 'المعلمون والمعلمات', {'student', 'admin'}, () => const TeachersScreen(), 'teacher-char.jpg'),
-    _Item(Icons.campaign, 'إدارة الإعلانات', {'admin'}, () => const AnnouncementsScreen()),
-    _Item(Icons.local_library, 'المكتبة', {'admin', 'staff'}, () => const LibraryScreen()),
-    _Item(Icons.insights, 'لوحة طمأنينة', {'admin'}, () => const TamDashScreen()),
-    _Item(Icons.support_agent, 'التواصل مع المرشد', {'student', 'teacher', 'staff', 'admin'}, () => const SupportScreen(), 'char-feedback.svg'),
-    _Item(Icons.lock, 'كلمة السر', {'teacher', 'staff', 'admin'}, () => const PasswordScreen(), 'char-password.svg'),
-  ];
-
-  void _open(Widget w) =>
-      Navigator.push(context, MaterialPageRoute(builder: (_) => w)).then((_) => setState(() => _ann = _loadAnnouncements()));
-
-  Widget _bubble(_Item i, int n) {
-    final cs = Theme.of(context).colorScheme;
-    return FloatBubble(
-      anim: _c,
-      phase: (n % 3) * .3,
-      size: 142,
-      onTap: () => _open(i.page()),
-      child: ColoredBox(
-        color: cs.surface.withValues(alpha: .92),
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          if (i.asset != null)
-            ClipOval(child: SizedBox(width: 72, height: 72, child: ColoredBox(color: Colors.white, child: assetImage(i.asset!))))
-          else
-            Icon(i.icon, size: 44, color: cs.primary),
-          const SizedBox(height: 4),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Text(i.title, textAlign: TextAlign.center, maxLines: 2, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold)),
-          ),
-        ]),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: session,
-      builder: (context, _) {
-        final items = _items.where((i) => i.roles.contains(session.role)).toList();
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(session.isStudent ? 'بوابة الطالب' : '${roleLabels[session.role]} - ${session.name}',
-                style: GoogleFonts.arefRuqaa(fontSize: 22, fontWeight: FontWeight.bold)),
-            actions: [if (session.loggedIn) TextButton(onPressed: session.logout, child: const Text('خروج'))],
-          ),
-          body: RefreshIndicator(
-            onRefresh: () async => setState(() => _ann = _loadAnnouncements()),
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
-              children: [
-                _announcementsBox(_ann),
-                const SizedBox(height: 22),
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: 16,
-                  runSpacing: 18,
-                  children: [for (var n = 0; n < items.length; n++) _bubble(items[n], n)],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
 // ===== main.dart =====
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -1823,153 +1318,8 @@ Future<void> main() async {
   try {
     await session.restore();
   } catch (_) {/* بدون اتصال: يبدأ كطالب */}
+  await loadThemeMode();
   runApp(const NokhbaApp());
-}
-
-final navKey = GlobalKey<NavigatorState>();
-final canGoBack = ValueNotifier<bool>(false);
-
-class _BackObserver extends NavigatorObserver {
-  void _upd() => WidgetsBinding.instance.addPostFrameCallback((_) => canGoBack.value = navKey.currentState?.canPop() ?? false);
-  @override
-  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) => _upd();
-  @override
-  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) => _upd();
-  @override
-  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) => _upd();
-}
-
-/// الخلفية: شعار المدرسة ثابت مع بلور خفيف + سهم رجوع عائم دائماً.
-Widget _appShell(BuildContext context, Widget? child) {
-  final dark = Theme.of(context).brightness == Brightness.dark;
-  final top = MediaQuery.of(context).padding.top + kToolbarHeight + 8;
-  return Stack(children: [
-    Positioned.fill(child: ColoredBox(color: dark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9))),
-    Positioned.fill(
-      child: ImageFiltered(
-        imageFilter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
-        child: Opacity(opacity: dark ? .45 : .85, child: Image.asset('assets/images/school-logo.jpg', fit: BoxFit.cover)),
-      ),
-    ),
-    if (child != null)
-      Positioned.fill(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 900),
-            child: Padding(
-              padding: const EdgeInsets.all(15),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: (dark ? const Color(0xFF1E293B) : Colors.white).withValues(alpha: .58),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: const [BoxShadow(color: Color(0x1A000000), blurRadius: 12, offset: Offset(0, 4))],
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(5),
-                  child: child!,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    Positioned(
-      left: 12,
-      top: top,
-      child: ValueListenableBuilder<bool>(
-        valueListenable: canGoBack,
-        builder: (_, can, __) => can
-            ? Material(
-                color: const Color(0xFF3B82F6),
-                shape: const CircleBorder(),
-                elevation: 5,
-                child: InkWell(
-                  customBorder: const CircleBorder(),
-                  onTap: () => navKey.currentState?.maybePop(),
-                  child: const Padding(padding: EdgeInsets.all(12), child: Icon(Icons.arrow_forward, color: Colors.white, size: 26)),
-                ),
-              )
-            : const SizedBox.shrink(),
-      ),
-    ),
-  ]);
-}
-
-class NokhbaApp extends StatelessWidget {
-  const NokhbaApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    const seed = Color(0xFF2563EB);
-    ThemeData theme(Brightness b) {
-      final dark = b == Brightness.dark;
-      final scheme = ColorScheme.fromSeed(seedColor: seed, brightness: b).copyWith(
-        primary: dark ? const Color(0xFF3B82F6) : const Color(0xFF2563EB),
-        surface: dark ? const Color(0xFF1E293B) : Colors.white,
-      );
-      final base = ThemeData(colorScheme: scheme, useMaterial3: true);
-      return base.copyWith(
-        scaffoldBackgroundColor: Colors.transparent,
-        textTheme: GoogleFonts.cairoTextTheme(base.textTheme).apply(
-          bodyColor: dark ? const Color(0xFFCBD5E1) : const Color(0xFF334155),
-          displayColor: dark ? const Color(0xFFF8FAFC) : const Color(0xFF1E293B),
-        ),
-        appBarTheme: AppBarTheme(
-          backgroundColor: Colors.transparent,
-          foregroundColor: dark ? const Color(0xFFF8FAFC) : const Color(0xFF1E293B),
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          centerTitle: true,
-        ),
-        cardTheme: CardThemeData(
-          color: scheme.surface.withValues(alpha: .94),
-          elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: scheme.surface.withValues(alpha: .88),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(color: dark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
-          ),
-        ),
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            backgroundColor: scheme.primary,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-            textStyle: GoogleFonts.cairo(fontWeight: FontWeight.bold),
-          ),
-        ),
-      );
-    }
-
-    return MaterialApp(
-      title: 'نخبة | Nokhba',
-      debugShowCheckedModeBanner: false,
-      navigatorKey: navKey,
-      navigatorObservers: [_BackObserver()],
-      builder: _appShell,
-      locale: const Locale('ar'),
-      supportedLocales: const [Locale('ar')],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      themeMode: ThemeMode.system,
-      theme: theme(Brightness.light),
-      darkTheme: theme(Brightness.dark),
-      home: ListenableBuilder(
-        listenable: session,
-        builder: (_, __) => session.loggedIn ? const HomeScreen() : const WelcomeScreen(),
-      ),
-    );
-  }
 }
 
 // ===== الجداول الافتراضية (تُستخدم إن لم يوجد جدول بالقاعدة) =====
