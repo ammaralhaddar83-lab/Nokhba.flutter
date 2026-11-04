@@ -1246,17 +1246,19 @@ class FloatBubble extends StatelessWidget {
           offset: Offset(0, -8 * math.sin(math.pi * (anim.value + phase))),
           child: w,
         ),
-        child: GestureDetector(
-          onTap: onTap,
-          child: Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color.fromRGBO(255, 255, 255, .7), width: 3),
-              boxShadow: const [BoxShadow(color: Color.fromRGBO(37, 99, 235, .35), blurRadius: 16, offset: Offset(0, 6))],
+        child: RepaintBoundary(
+          child: GestureDetector(
+            onTap: onTap,
+            child: Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color.fromRGBO(255, 255, 255, .7), width: 3),
+                boxShadow: const [BoxShadow(color: Color.fromRGBO(37, 99, 235, .35), blurRadius: 12, offset: Offset(0, 5))],
+              ),
+              child: ClipOval(child: child),
             ),
-            child: ClipOval(child: child),
           ),
         ),
       );
