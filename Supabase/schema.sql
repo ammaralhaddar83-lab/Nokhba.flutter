@@ -165,4 +165,3 @@ create policy loans_staff on library_loans for all
   with check (true);
 -- كل مستخدم يقرأ صف profiles الخاص به
 create policy own_profile on profiles for select using (username = split_part(auth.jwt() ->> 'email','@',1));
-
