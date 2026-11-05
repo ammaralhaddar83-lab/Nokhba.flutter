@@ -111,7 +111,8 @@ $$;
 create or replace function update_my_card_v3(p_name text, p_specialty text, p_bio text, p_photo text, p_years int)
 returns void language sql security definer set search_path = public as $$
   update teachers set name = coalesce(p_name, name), specialty = p_specialty, bio = p_bio,
-         photo = coalesce(p_photo, photo), years_experience = p_years
+         photo = case when p_photo = '' then null else coalesce(p_photo, photo) end,
+         years_experience = p_years
   where username = split_part(auth.jwt() ->> 'email', '@', 1);
 $$;
 
